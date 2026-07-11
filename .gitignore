@@ -1,0 +1,15 @@
+# Cartelle generate dalla build
+
+dist/
+build/
+OLD/
+
+# File generato da PyInstaller o simili
+
+# Altri file temporanei / editor
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.swp
+*.DS_Store
