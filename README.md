@@ -129,6 +129,9 @@ sudo python main.py
 
 ## Changelog
 
+### v1.0.2
+- Fix: corretta la dimensione della finestra di aggiunta / modifica DNS, che nascondeva i pulsanti Salva e Annulla rendendo impossibile confermare le modifiche.
+
 ### v1.0.1
 - Fix: corretti newline non interpretati (`\\n` invece di `\n`) nei messaggi di conferma di apply.py e manage.py
 

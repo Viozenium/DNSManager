@@ -13,7 +13,7 @@ class DNSDialog(tk.Toplevel):
         self.title(title)
         self.configure(bg=t["bg"])
         self.resizable(False, False)
-        self.geometry("420x310")
+        self.geometry("420x420")
         self.transient(parent)
         self.grab_set()
 
