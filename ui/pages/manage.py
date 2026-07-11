@@ -125,7 +125,7 @@ class ManagePage(BasePage):
     def _reset(self):
         if messagebox.askyesno(
             "Ripristina Lista",
-            "Ripristinare la lista DNS predefinita?\\nTutte le modifiche verranno perse.",
+            "Ripristinare la lista DNS predefinita? \nTutte le modifiche verranno perse.",
         ):
             self.cfg.reset_dns_list()
             self._refresh_tree()

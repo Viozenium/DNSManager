@@ -199,7 +199,7 @@ class ApplyPage(BasePage):
     def _restore(self):
         if not messagebox.askyesno(
             "Ripristina DNS",
-            "Ripristinare i DNS automatici (DHCP)?\\nIl sistema tornerà ai server della rete.",
+            "Ripristinare i DNS automatici (DHCP)? \nIl sistema tornerà ai server della rete.",
         ):
             return
         try:
@@ -219,7 +219,7 @@ class ApplyPage(BasePage):
             apply_dns(primary, secondary)
             messagebox.showinfo(
                 "Successo",
-                f"DNS applicato!\\n\\nPrimario:    {primary}\\nSecondario: {secondary or '—'}",
+                f"DNS applicato! \n \nPrimario: {primary} \nSecondario: {secondary or '—'}",
             )
             if self.refresh_cb:
                 self.refresh_cb()

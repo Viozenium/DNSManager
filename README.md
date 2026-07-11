@@ -129,6 +129,9 @@ sudo python main.py
 
 ## Changelog
 
+### v1.0.1
+- Fix: corretti newline non interpretati (`\\n` invece di `\n`) nei messaggi di conferma di apply.py e manage.py
+
 ### v1.0.0
 - Prima release pubblica
 - GUI completa con 4 sezioni: Applica DNS, Gestisci Lista, Modifica Manuale, Impostazioni
