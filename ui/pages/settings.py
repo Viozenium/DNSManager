@@ -26,7 +26,7 @@ def get_os_label() -> str:
 
 class SettingsPage(BasePage):
     def _build(self):
-        self._h1("⚙️  Impostazioni")
+        self._h1("Impostazioni")
         self._sub("Personalizza l'aspetto dell'applicazione")
         self._theme_card()
         self._info_card()

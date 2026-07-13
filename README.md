@@ -129,6 +129,12 @@ sudo python main.py
 
 ## Changelog
 
+### v1.0.3
+- Fix: risolto errore TclError causato dal binding globale della rotellina del mouse, che si verificava passando da "Applica DNS" ad altre pagine.
+- Fix: impedito lo scroll della lista DNS quando tutti gli elementi sono già visibili nello spazio disponibile
+- Aggiornata la versione mostrata in sidebar e nella finestra info
+
+
 ### v1.0.2
 - Fix: corretta la dimensione della finestra di aggiunta / modifica DNS, che nascondeva i pulsanti Salva e Annulla rendendo impossibile confermare le modifiche.
 

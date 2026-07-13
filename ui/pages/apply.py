@@ -100,10 +100,24 @@ class ApplyPage(BasePage):
             "<Configure>",
             lambda e: canvas.itemconfig(win_id, width=canvas.winfo_width()),
         )
-        canvas.bind_all(
-            "<MouseWheel>",
-            lambda e: canvas.yview_scroll(-1 * (e.delta // 120), "units"),
-        )
+
+        def _on_mousewheel(e):
+            bbox = canvas.bbox("all")
+            if bbox is None:
+                return
+            content_height = bbox[3] - bbox[1]
+            if content_height <= canvas.winfo_height():
+                return
+            canvas.yview_scroll(-1 * (e.delta // 120), "units")
+
+        def _bind_scroll(_e=None):
+            canvas.bind_all("<MouseWheel>", _on_mousewheel)
+
+        def _unbind_scroll(_e=None):
+            canvas.unbind_all("<MouseWheel>")
+
+        canvas.bind("<Enter>", _bind_scroll)
+        canvas.bind("<Leave>", _unbind_scroll)
 
         dns_list = self.cfg.dns_list
         if not dns_list:
@@ -183,9 +197,9 @@ class ApplyPage(BasePage):
         self._btn(bf, "Applica DNS Selezionato", self._apply).pack(
             side="left", padx=(0, 10)
         )
-        self._btn(
-            bf, "Ripristina DNS Default", self._restore, style="secondary"
-        ).pack(side="left")
+        self._btn(bf, "Ripristina DNS Default", self._restore, style="secondary").pack(
+            side="left"
+        )
 
     def _apply(self):
         name = self._sel.get()

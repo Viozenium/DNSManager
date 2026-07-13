@@ -48,7 +48,7 @@ class Sidebar(tk.Frame):
             fill="x", padx=12, side="bottom", pady=(0, 4)
         )
         tk.Button(
-            self, text=ICON + "v1.0.0",
+            self, text=ICON + "v1.0.3",
             bg=t["sidebar"], fg=t["muted"],
             font=(FONT, 9), relief="flat", bd=0,
             cursor="hand2" if self._on_info else "",
