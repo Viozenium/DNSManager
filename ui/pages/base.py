@@ -1,3 +1,4 @@
+import threading
 import tkinter as tk
 
 FONT = "Segoe UI"
@@ -14,6 +15,21 @@ class BasePage(tk.Frame):
 
     def _build(self):
         raise NotImplementedError
+
+    # --------------------------------------------------------------------
+    # Esecuzione asincrona (evita di bloccare la UI durante le chiamate di sistema)
+
+    def _run_bg(self, work, on_done):
+        def runner():
+            try:
+                result = work()
+                error = None
+            except Exception as e:
+                result = None
+                error = e
+            self.after(0, lambda: on_done(result, error))
+
+        threading.Thread(target=runner, daemon=True).start()
 
     # --------------------------------------------------------------------
     # Helper UI

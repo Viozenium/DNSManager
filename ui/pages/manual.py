@@ -50,7 +50,8 @@ class ManualPage(BasePage):
         tk.Frame(card, bg=t["card"], height=6).pack()
         bf = tk.Frame(card, bg=t["card"])
         bf.pack(fill="x", padx=22, pady=(4, 20))
-        self._btn(bf, "Applica", self._apply).pack(side="left", padx=(0, 10))
+        self._apply_btn = self._btn(bf, "Applica", self._apply)
+        self._apply_btn.pack(side="left", padx=(0, 10))
         self._btn(bf, "Salva in Lista", self._save_to_list, style="secondary").pack(
             side="left"
         )
@@ -117,6 +118,9 @@ class ManualPage(BasePage):
     # --------------------------------------------------------------------
     # Azioni
 
+    def _set_busy(self, busy: bool):
+        self._apply_btn.configure(state="disabled" if busy else "normal")
+
     def _apply(self):
         p = self._vars["primary"].get().strip()
         s = self._vars["secondary"].get().strip()
@@ -126,18 +130,23 @@ class ManualPage(BasePage):
         if not validate_ip(s, allow_empty=True):
             messagebox.showerror("Errore", "DNS secondario non valido.")
             return
-        try:
-            apply_dns(p, s)
-            messagebox.showinfo(
-                "Successo",
-                f"DNS applicato!\n\nPrimario:    {p}\nSecondario: {s or '—'}",
-            )
-            if self.refresh_cb:
-                self.refresh_cb()
-        except PermissionError:
-            messagebox.showerror("Permessi", "Esegui come Amministratore o con sudo.")
-        except Exception as e:
-            messagebox.showerror("Errore", str(e))
+
+        def done(_result, error):
+            self._set_busy(False)
+            if error is None:
+                messagebox.showinfo(
+                    "Successo",
+                    f"DNS applicato!\n\nPrimario:    {p}\nSecondario: {s or '—'}",
+                )
+                if self.refresh_cb:
+                    self.refresh_cb()
+            elif isinstance(error, PermissionError):
+                messagebox.showerror("Permessi", "Esegui come Amministratore o con sudo.")
+            else:
+                messagebox.showerror("Errore", str(error))
+
+        self._set_busy(True)
+        self._run_bg(lambda: apply_dns(p, s), done)
 
     def _save_to_list(self):
         p = self._vars["primary"].get().strip()

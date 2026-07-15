@@ -129,10 +129,10 @@ class ApplyPage(BasePage):
                 font=(FONT, 12),
             ).pack(pady=50)
         else:
-            for entry in dns_list:
-                self._dns_row(inner, entry)
+            for idx, entry in enumerate(dns_list):
+                self._dns_row(inner, idx, entry)
 
-    def _dns_row(self, parent, entry: dict):
+    def _dns_row(self, parent, idx: int, entry: dict):
         t = self.t
         f = tk.Frame(parent, bg=t["card"], cursor="hand2")
         f.pack(fill="x", pady=3)
@@ -140,7 +140,7 @@ class ApplyPage(BasePage):
         rb = tk.Radiobutton(
             f,
             variable=self._sel,
-            value=entry["name"],
+            value=str(idx),
             bg=t["card"],
             activebackground=t["card"],
             selectcolor=t["accent"],
@@ -167,7 +167,7 @@ class ApplyPage(BasePage):
         ).pack(anchor="w")
 
         def select(_e=None):
-            self._sel.set(entry["name"])
+            self._sel.set(str(idx))
 
         def h_on(_e):
             for w in (f, info, rb, *info.winfo_children()):
@@ -194,21 +194,30 @@ class ApplyPage(BasePage):
     def _draw_buttons(self):
         bf = tk.Frame(self, bg=self.t["bg"])
         bf.pack(fill="x", padx=30, pady=14)
-        self._btn(bf, "Applica DNS Selezionato", self._apply).pack(
-            side="left", padx=(0, 10)
+        self._apply_btn = self._btn(bf, "Applica DNS Selezionato", self._apply)
+        self._apply_btn.pack(side="left", padx=(0, 10))
+        self._restore_btn = self._btn(
+            bf, "Ripristina DNS Default", self._restore, style="secondary"
         )
-        self._btn(bf, "Ripristina DNS Default", self._restore, style="secondary").pack(
-            side="left"
-        )
+        self._restore_btn.pack(side="left")
+
+    def _set_busy(self, busy: bool):
+        state = "disabled" if busy else "normal"
+        self._apply_btn.configure(state=state)
+        self._restore_btn.configure(state=state)
 
     def _apply(self):
-        name = self._sel.get()
-        if not name:
+        sel = self._sel.get()
+        if not sel:
             messagebox.showwarning("Attenzione", "Seleziona un DNS dalla lista.")
             return
-        entry = next((d for d in self.cfg.dns_list if d["name"] == name), None)
-        if entry:
-            self._do_apply(entry["primary"], entry.get("secondary", ""))
+        dns_list = self.cfg.dns_list
+        idx = int(sel)
+        if idx >= len(dns_list):
+            messagebox.showwarning("Attenzione", "Seleziona un DNS dalla lista.")
+            return
+        entry = dns_list[idx]
+        self._do_apply(entry["primary"], entry.get("secondary", ""))
 
     def _restore(self):
         if not messagebox.askyesno(
@@ -216,28 +225,37 @@ class ApplyPage(BasePage):
             "Ripristinare i DNS automatici (DHCP)? \nIl sistema tornerà ai server della rete.",
         ):
             return
-        try:
-            restore_default()
-            messagebox.showinfo(
-                "Successo", "DNS ripristinati ai valori automatici (DHCP)."
-            )
-            if self.refresh_cb:
-                self.refresh_cb()
-        except PermissionError:
-            messagebox.showerror("Permessi", "Esegui come Amministratore o con sudo.")
-        except Exception as e:
-            messagebox.showerror("Errore", str(e))
+
+        def done(_result, error):
+            self._set_busy(False)
+            if error is None:
+                messagebox.showinfo(
+                    "Successo", "DNS ripristinati ai valori automatici (DHCP)."
+                )
+                if self.refresh_cb:
+                    self.refresh_cb()
+            elif isinstance(error, PermissionError):
+                messagebox.showerror("Permessi", "Esegui come Amministratore o con sudo.")
+            else:
+                messagebox.showerror("Errore", str(error))
+
+        self._set_busy(True)
+        self._run_bg(restore_default, done)
 
     def _do_apply(self, primary: str, secondary: str = ""):
-        try:
-            apply_dns(primary, secondary)
-            messagebox.showinfo(
-                "Successo",
-                f"DNS applicato! \n \nPrimario: {primary} \nSecondario: {secondary or '—'}",
-            )
-            if self.refresh_cb:
-                self.refresh_cb()
-        except PermissionError:
-            messagebox.showerror("Permessi", "Esegui come Amministratore o con sudo.")
-        except Exception as e:
-            messagebox.showerror("Errore", str(e))
+        def done(_result, error):
+            self._set_busy(False)
+            if error is None:
+                messagebox.showinfo(
+                    "Successo",
+                    f"DNS applicato! \n \nPrimario: {primary} \nSecondario: {secondary or '—'}",
+                )
+                if self.refresh_cb:
+                    self.refresh_cb()
+            elif isinstance(error, PermissionError):
+                messagebox.showerror("Permessi", "Esegui come Amministratore o con sudo.")
+            else:
+                messagebox.showerror("Errore", str(error))
+
+        self._set_busy(True)
+        self._run_bg(lambda: apply_dns(primary, secondary), done)

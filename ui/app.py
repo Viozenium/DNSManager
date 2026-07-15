@@ -21,6 +21,9 @@ class DNSManagerApp(tk.Tk):
     def __init__(self):
         super().__init__()
         self.cfg = ConfigManager()
+        if self.cfg.theme not in THEMES:
+            self.cfg.theme = "dark"
+            self.cfg.save()
         self.t = THEMES[self.cfg.theme]
         self._active_page = "apply"
         self._info_win = None

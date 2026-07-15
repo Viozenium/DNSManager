@@ -2,7 +2,7 @@ import tkinter as tk
 import webbrowser
 
 AUTHOR = "Mizu"
-VERSION = "1.0.3"
+VERSION = "1.0.4"
 GITHUB_LABEL = "Viozenium"
 GITHUB_URL = "https://github.com/Viozenium"
 

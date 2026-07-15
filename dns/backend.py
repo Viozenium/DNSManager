@@ -1,3 +1,4 @@
+import ipaddress
 import platform
 import re
 import subprocess
@@ -6,17 +7,17 @@ OS = platform.system()
 
 IP_RE = re.compile(r"\d{1,3}(?:\.\d{1,3}){3}")
 
+_CONNECTED_STATES = {"connected", "connesso", "conectado", "connecte", "verbunden"}
+
 # --------------------------------------------------------------------
 # Validazione
 
 def validate_ip(ip: str, allow_empty: bool = False) -> bool:
     if not ip:
         return allow_empty
-    parts = ip.strip().split(".")
-    if len(parts) != 4:
-        return False
     try:
-        return all(0 <= int(p) <= 255 for p in parts)
+        ipaddress.IPv4Address(ip.strip())
+        return True
     except ValueError:
         return False
 
@@ -38,17 +39,24 @@ def get_current_dns() -> dict:
 
 
 def _current_windows() -> dict:
-    r = subprocess.run(
-        ["netsh", "interface", "ip", "show", "dns"],
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
-        errors="ignore",
-    )
-    servers = IP_RE.findall(r.stdout)
+    for iface in _win_interfaces():
+        r = subprocess.run(
+            ["netsh", "interface", "ip", "show", "dns", iface],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="ignore",
+        )
+        servers = IP_RE.findall(r.stdout)
+        if servers:
+            return {
+                "primary": servers[0],
+                "secondary": servers[1] if len(servers) > 1 else "—",
+                "source": f'netsh interface ip show dns "{iface}"',
+            }
     return {
-        "primary": servers[0] if len(servers) > 0 else "—",
-        "secondary": servers[1] if len(servers) > 1 else "—",
+        "primary": "—",
+        "secondary": "—",
         "source": "netsh interface ip show dns",
     }
 
@@ -111,12 +119,7 @@ def apply_dns(primary: str, secondary: str = ""):
 
 def restore_default():
     if OS == "Windows":
-        for iface in _win_interfaces():
-            subprocess.run(
-                ["netsh", "interface", "ip", "set", "dns", iface, "dhcp"],
-                check=True,
-                capture_output=True,
-            )
+        _restore_windows()
     elif OS == "Linux":
         with open("/etc/resolv.conf", "w") as f:
             f.write("# generato automaticamente\n")
@@ -132,30 +135,98 @@ def restore_default():
 # Helpers per OS
 
 def _win_interfaces() -> list:
+    try:
+        r = subprocess.run(
+            [
+                "powershell",
+                "-NoProfile",
+                "-Command",
+                "Get-NetAdapter | Where-Object { $_.Status -eq 'Up' } "
+                "| Select-Object -ExpandProperty Name",
+            ],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="ignore",
+            timeout=10,
+        )
+        names = [l.strip() for l in r.stdout.splitlines() if l.strip()]
+        if names:
+            return names
+    except Exception:
+        pass
+
     r = subprocess.run(
-        ["netsh", "interface", "show", "interface"], capture_output=True, text=True
+        ["netsh", "interface", "show", "interface"],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="ignore",
     )
     ifaces = []
     for line in r.stdout.splitlines()[3:]:
         parts = line.split()
-        if len(parts) >= 4 and parts[1] == "Connected":
+        if len(parts) >= 4 and parts[1].strip().lower() in _CONNECTED_STATES:
             ifaces.append(" ".join(parts[3:]))
     return ifaces or ["Wi-Fi", "Ethernet"]
 
 
 def _apply_windows(primary: str, secondary: str):
-    for iface in _win_interfaces():
-        subprocess.run(
-            ["netsh", "interface", "ip", "set", "dns", iface, "static", primary],
-            check=True,
-            capture_output=True,
-        )
-        if secondary:
+    interfaces = _win_interfaces()
+    applied = 0
+    failed = []
+    for iface in interfaces:
+        try:
             subprocess.run(
-                ["netsh", "interface", "ip", "add", "dns", iface, secondary, "index=2"],
+                ["netsh", "interface", "ip", "set", "dns", iface, "static", primary],
                 check=True,
                 capture_output=True,
             )
+            if secondary:
+                subprocess.run(
+                    ["netsh", "interface", "ip", "add", "dns", iface, secondary, "index=2"],
+                    check=True,
+                    capture_output=True,
+                )
+            applied += 1
+        except subprocess.CalledProcessError:
+            failed.append(iface)
+
+    if applied == 0:
+        raise RuntimeError(
+            f"Impossibile applicare il DNS su nessuna interfaccia ({', '.join(interfaces)})."
+        )
+    if failed:
+        raise RuntimeError(
+            f"DNS applicato su {applied}/{len(interfaces)} interfacce. "
+            f"Fallite: {', '.join(failed)}."
+        )
+
+
+def _restore_windows():
+    interfaces = _win_interfaces()
+    applied = 0
+    failed = []
+    for iface in interfaces:
+        try:
+            subprocess.run(
+                ["netsh", "interface", "ip", "set", "dns", iface, "dhcp"],
+                check=True,
+                capture_output=True,
+            )
+            applied += 1
+        except subprocess.CalledProcessError:
+            failed.append(iface)
+
+    if applied == 0:
+        raise RuntimeError(
+            f"Impossibile ripristinare il DNS su nessuna interfaccia ({', '.join(interfaces)})."
+        )
+    if failed:
+        raise RuntimeError(
+            f"DNS ripristinato su {applied}/{len(interfaces)} interfacce. "
+            f"Fallite: {', '.join(failed)}."
+        )
 
 
 def _apply_linux(primary: str, secondary: str):
@@ -183,4 +254,4 @@ def _apply_macos(primary: str, secondary: str):
             ["networksetup", "-setdnsservers", svc] + args,
             check=True,
             capture_output=True,
-        ).lstrip()
+        )

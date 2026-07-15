@@ -1,7 +1,23 @@
 import json
 import os
+import platform
+import shutil
 
-CONFIG_FILE = "config.json"
+
+def _config_dir() -> str:
+    system = platform.system()
+    if system == "Windows":
+        base = os.environ.get("APPDATA") or os.path.expanduser("~")
+    elif system == "Darwin":
+        base = os.path.expanduser("~/Library/Application Support")
+    else:
+        base = os.environ.get("XDG_CONFIG_HOME") or os.path.expanduser("~/.config")
+    path = os.path.join(base, "DNSManager")
+    os.makedirs(path, exist_ok=True)
+    return path
+
+
+CONFIG_FILE = os.path.join(_config_dir(), "config.json")
 
 DEFAULT_DNS_LIST = [
     {"name": "Google", "primary": "8.8.8.8", "secondary": "8.8.4.4"},
@@ -32,7 +48,10 @@ class ConfigManager:
                 with open(CONFIG_FILE, "r", encoding="utf-8") as f:
                     return json.load(f)
             except Exception:
-                pass
+                try:
+                    shutil.copy(CONFIG_FILE, CONFIG_FILE + ".corrotto")
+                except OSError:
+                    pass
         return dict(DEFAULT_CONFIG)
 
     def save(self):
