@@ -129,6 +129,18 @@ sudo python main.py
 
 ## Changelog
 
+### v1.0.4
+- Fix: su macOS, una chiamata errata (`.lstrip()` su un oggetto `CompletedProcess`) causava un `AttributeError` ad ogni applicazione DNS
+- Fix: su Windows, il rilevamento delle interfacce di rete attive dipendeva dalla stringa inglese "Connected" e falliva con Windows in lingua italiana o altre lingue
+- Fix: su Windows, l'applicazione o il ripristino del DNS si interrompeva alla prima interfaccia non compatibile, lasciando le altre non configurate senza avviso
+- Fix: la lettura dei DNS attivi su Windows poteva mischiare indirizzi primario/secondario provenienti da interfacce diverse
+- Fix: un tema non valido o corrotto in `config.json` causava un crash all'avvio dell'app
+- Fix: un `config.json` corrotto veniva scartato silenziosamente; ora viene preservato come backup (`config.json.corrotto`) prima di ripartire dai valori predefiniti
+- Fix: `config.json` non dipende più dalla cartella di avvio dell'app; viene salvato in una posizione stabile (`%APPDATA%/DNSManager` su Windows)
+- Fix: due voci della lista DNS con lo stesso nome potevano causare l'applicazione dell'indirizzo sbagliato
+- Fix: la validazione degli indirizzi IP ora rifiuta correttamente ottetti malformati (es. `+1`, `007`)
+- Fix: le operazioni di applicazione/ripristino DNS non bloccano più l'interfaccia grafica durante l'esecuzione
+
 ### v1.0.3
 - Fix: risolto errore TclError causato dal binding globale della rotellina del mouse, che si verificava passando da "Applica DNS" ad altre pagine.
 - Fix: impedito lo scroll della lista DNS quando tutti gli elementi sono già visibili nello spazio disponibile
